@@ -1,0 +1,399 @@
+<html>
+
+<head>
+	<style>
+		table,
+		tr,
+		td {
+			border-collapse: collapse;
+			border-spacing: 0px;
+			padding: 0px;
+		}
+
+		/* .block-air {
+				width: 100px;
+				background-color: blue;
+			} */
+		.block-unbreakable_block {
+			background-image: url('Table-Game_UNBREAKABLE_BLOCK.png');
+		}
+
+		.center {
+			display: block;
+			margin-left: auto;
+			margin-right: auto;
+		}
+
+		header {
+			background-color: #616161;
+			border: none;
+		}
+
+		.invisButton {
+			border: none;
+			background: none;
+		}
+
+		body {
+			background-color: #1D2A35;
+		}
+
+		.bodyBackground {
+			background-color: #1D2A35;
+		}
+
+		.playingTable {
+			margin-top: 20px;
+			margin-left: auto;
+			margin-right: auto;
+		}
+
+		.fillModeDesign {
+			border: 4px solid #1a879f;
+			width: 24px;
+			height: 24px;
+		}
+
+		.fillModeDesign_left {
+			border-left: 0px solid #1a879f;
+		}
+
+		.fillModeDesign_right {
+			border-right: 0px solid #1a879f;
+		}
+
+		.fillModeDesign_top {
+			border-top: 0px solid #1a879f;
+		}
+
+		.fillModeDesign_bottom {
+			border-bottom: 0px solid #1a879f;
+		}
+
+		.regularDesign {
+			/* border-collapse: collapse;
+				border-spacing: 0px;
+				padding: 0px; */
+			width: 32px;
+			height: 32px;
+		}
+	</style>
+	<title>
+
+	</title>
+
+</head>
+
+<body>
+	<header>
+		<div style="position:relative; top: 10 px ; left: 2px;  ">
+			<button type="button" class="invisButton" id="menuButton">
+				<img src="Textures/menu-button.png">
+			</button>
+		</div>
+		<div style="position: relative; text-align: center; bottom: 35px;">
+			<h2 style="color:white;">made by Jakob</h3>
+		</div>
+	</header>
+	<div>
+		<img src="Textures/Logo.png" widht="400" height="400" class="center">
+	</div>
+	<div>
+		<p style="color: white;">x:</p>
+		<input type="number" id="xInput" value="10" min="5" max="30">
+		<p style="color: white;">y:</p>
+		<input type="number" id="yInput" value="10" min="5" max="30">
+	</div>
+	<button id="createTable" onclick=" creatingTableLE()">Create Table</button>
+	<button onclick="fillAreaToggle()"> fill Area</button>
+	<input type="text" id="levelNameTxt">
+	<button onclick="saveLevel()">SaveLevel</button>
+</body>
+<script src="FileSaver.js"></script>
+<script src="globalFunctions.js"></script>
+<script>
+
+	var modelCreation = [[]]
+	var nothing = [[]]
+	var visuellBlockbar = [
+		[PLAYER,
+			UNBREAKABLE_BLOCK,
+			AIR,
+			MOVE,
+			GOAL,
+			SLIDE,
+			BOMB,
+			BREAKABLE_BLOCK,
+			GRAVATY_SIM_UP,
+			GRAVATY_SIM_RIGHT,
+			GRAVATY_SIM_DOWN,
+			GRAVATY_SIM_LEFT,
+			KEY,
+			LOCK,
+			NO_PLAYER,
+			DUPLICATOR
+		]
+	]
+	var blocksPlaced = {}
+
+	var slectedBlock = AIR;
+	var fillMode = false;
+
+	function creatingTableLE() {
+		//removeOldTable("blockTable");
+		var table = createTable(document.getElementById("xInput").value, document.getElementById("yInput").value, "creatingTable", "creatingCell_");
+		modelCreation = modifyModel(modelCreation, document.getElementById("xInput").value, document.getElementById("yInput").value)
+		initAir();
+		var blockTable = createTable(1, visuellBlockbar[0].length, "blockTable", "blockTableCells");
+		tableCellOnclickDet(table);
+		tableCellOnclickDet(blockTable);
+		tableCellMouseoverDet(table);
+		table.onclick = modifyCreatingTable;
+		blockTable.onclick = modifySelectedBlock;
+		updateLeTable();
+	}
+
+
+	function initAir() {
+		for (x = 1; x < modelCreation.length - 1; x++) {
+			for (y = 1; y < modelCreation[x].length - 1; y++) {
+				modelCreation[x][y] = AIR;
+			}
+		}
+	}
+
+
+	function updateLeTable() {
+		updateTable(modelCreation, "creatingCell_"),
+			updateTable(visuellBlockbar, "blockTableCells")
+	}
+
+
+	function modifyCreatingTable() {
+		if (fillMode) {
+			if (sessionStorage.getItem("cellX") != null) {
+				fillArea(JSON.parse(sessionStorage.getItem("cellX")), { coordX: coordCellX, coordY: coordCellY })
+				sessionStorage.removeItem("cellX")
+				removeImgClasses();
+				fillAreaToggle();
+				updateLeTable();
+			} else {
+				var visuelCell = document.getElementById("creatingCell_" + coordCellX + "_" + coordCellY).childNodes[0];
+				visuelCell.classList.add("fillModeDesign");
+				borderOutlineConnection();
+				var cellX = { coordX: coordCellX, coordY: coordCellY }
+				sessionStorage.setItem("cellX", JSON.stringify(cellX))
+			}
+		} else {
+			var table = document.getElementById("creatingTable")
+			if (placeLimitObserver(slectedBlock, modelCreation[coordCellX][coordCellY])) {
+				modelCreation[coordCellX][coordCellY] = slectedBlock;
+				updateLeTable();
+			}
+		}
+
+	}
+
+
+	function modifySelectedBlock() {
+		var table = document.getElementById("blockTable")
+		slectedBlock = visuellBlockbar[0][coordCellY];
+	}
+
+
+	function fillAreaToggle() {
+		if (fillMode) {
+			fillMode = false;
+		} else {
+			fillMode = true;
+		}
+		sessionStorage.removeItem("cellX")
+	}
+
+		/**
+		 * fills an Area with the selected block
+		 * 
+		 * @param {element} cell1  must contain coordX and coordy
+		 * @param {element} cell2  must contain coordY and coordy
+		 * 
+		*/function fillArea(cell1, cell2) {
+		var i = false
+		var j = false
+		for (x = cell1.coordX; x != cell2.coordX + 1; x++) {
+			for (y = cell1.coordY; y != cell2.coordY + 1; y++) {
+				modelCreation[x][y] = slectedBlock;
+				if (cell1.coordY > cell2.coordY) {
+					y = y - 2
+					if (!i) {
+						cell2.coordY = cell2.coordY - 2
+						i = true
+					}
+				}
+			}
+			if (cell1.coordX > cell2.coordX) {
+				x = x - 2
+				if (!j) {
+					cell2.coordX = cell2.coordX - 2
+					j = true
+				}
+			}
+		}
+		updateLeTable();
+	}
+
+
+	function borderOutlineConnection() {
+		var markedCells = Array.from(document.getElementsByClassName("fillModeDesign"));
+		for (j = 0; j < markedCells.length; j++) {
+			const splitId = markedCells[j].parentElement.id.split("_")
+			const idName = splitId[0];
+			const cellX = Number(splitId[1]);
+			const cellY = Number(splitId[2]);
+			var widht = 24
+			var height = 24
+			try {
+				if (markedCells.includes(document.getElementById(idName + "_" + (cellX - 1) + "_" + cellY).childNodes[0])) {
+					markedCells[j].classList.add("fillModeDesign_top")
+					height = height + 4;
+				}
+			} catch { }
+			try {
+				if (markedCells.includes(document.getElementById(idName + "_" + (cellX + 1) + "_" + cellY).childNodes[0])) {
+					markedCells[j].classList.add("fillModeDesign_bottom")
+					height = height + 4;
+				}
+			} catch { }
+			try {
+				if (markedCells.includes(document.getElementById(idName + "_" + cellX + "_" + (cellY - 1)).childNodes[0])) {
+					markedCells[j].classList.add("fillModeDesign_left")
+					widht = widht + 4;
+				}
+			} catch { }
+			try {
+				if (markedCells.includes(document.getElementById(idName + "_" + cellX + "_" + (cellY + 1)).childNodes[0])) {
+					markedCells[j].classList.add("fillModeDesign_right")
+					widht = widht + 4;
+				}
+			} catch { }
+			markedCells[j].style.width = (widht + "px");
+			markedCells[j].style.height = (height + "px");
+		}
+	}
+
+	function tableCellMouseoverDet(table) {
+		var cells = table.querySelectorAll("td");
+		for (i = 0; i < cells.length; i++) {
+			cells[i].onmouseover = cellMouseover(cells[i]);
+		}
+	}
+
+	function cellMouseover(cell) {
+		return function () {
+
+			if (fillMode && sessionStorage.getItem("cellX") != null) {
+				removeImgClasses();
+				const splitCellId = cell.id.split("_");
+				const cellX = splitCellId[1]
+				const cellY = splitCellId[2]
+				var i = false
+				var j = false
+				var coordY = coordCellY
+				var coordX = coordCellX
+				if (cellX > coordX) {
+					if (!j) {
+						coordX = coordX - 2
+						j = true
+					}
+				}
+				if (cellY > coordY) {
+					if (!i) {
+						coordY = coordY - 2
+						i = true
+					}
+				}
+				for (x = cellX; x != coordX + 1; x++) {
+					for (y = cellY; y != coordY + 1; y++) {
+						document.getElementById(splitCellId[0] + "_" + x + "_" + y).childNodes[0].classList.add("fillModeDesign");
+						if (cellY > coordY) {
+							y = y - 2
+						}
+					}
+					if (cellX > coordX) {
+						x = x - 2
+					}
+				}
+				borderOutlineConnection();
+			}
+		}
+	}
+
+
+	function removeImgClasses() {
+		for (x = 0; x < modelCreation.length; x++) {
+			for (y = 0; y < modelCreation[x].length; y++) {
+				document.getElementById("creatingCell_" + x + "_" + y).childNodes[0].classList.remove("fillModeDesign", "fillModeDesign_left", "fillModeDesign_right", "fillModeDesign_top", "fillModeDesign_bottom", "regularDesign")
+				document.getElementById("creatingCell_" + x + "_" + y).childNodes[0].style.width = "32px"
+				document.getElementById("creatingCell_" + x + "_" + y).childNodes[0].style.height = "32px"
+			}
+		}
+	}
+
+
+	creatingTableLE();
+
+
+	function saveLevel() {
+		const randNumber = Math.random();
+		const createdLevelData = { sizeX: modelCreation.length, sizeY: modelCreation[0].length, model: modelCreation, levelName: undefined }
+		var levelName = document.getElementById("levelNameTxt").value + "_" + randNumber
+		if (!levelName.split("_", 1)) {
+			levelName = "LevelId_" + randNumber
+		}
+		var blob = new Blob([JSON.stringify(createdLevelData)],
+			{ type: "application/json;charset=utf-8" });
+		saveAs(blob, levelName + ".json");
+	}
+
+	function placeLimitObserver(placedBlock, oldBlock) {
+		function ifTrue(placedBlock, oldBlock) {
+			if (blocksPlaced[oldBlock]) blocksPlaced[oldBlock]--;
+			var blockbarPos = visuellBlockbar[0].indexOf(oldBlock + "_out");
+			if (visuellBlockbar[0][blockbarPos] == oldBlock + "_out") {
+				visuellBlockbar[0][blockbarPos] = oldBlock;
+				updateLeTable()
+			}
+		}
+		//checks if the selecdet block is an "out-design"
+		var splitName = placedBlock.split("_")
+		if (splitName.includes("out")) {
+			return false;
+		}
+
+		if (EXTRA_INFORMATION[placedBlock]) {
+			if (EXTRA_INFORMATION[placedBlock].maxElements) {
+				var i = EXTRA_INFORMATION[placedBlock].maxElements;
+				if (!blocksPlaced[placedBlock]) blocksPlaced[placedBlock] = 0;
+				if (blocksPlaced[placedBlock] < i) {
+					if (blocksPlaced[placedBlock] == i - 1) {
+						var blockbarPos = visuellBlockbar[0].indexOf(placedBlock);
+						visuellBlockbar[0][blockbarPos] = placedBlock + "_out";
+						updateLeTable();
+					}
+					blocksPlaced[placedBlock]++;
+					ifTrue(placedBlock, oldBlock);
+					return true;
+				}
+				else {
+					return false;
+				}
+			}
+		}
+		ifTrue(placedBlock, oldBlock);
+		return true;
+	}
+
+</script>
+
+
+
+</html>

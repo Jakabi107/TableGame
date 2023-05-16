@@ -1,0 +1,224 @@
+<html>
+	<head>
+		<title>
+
+		</title>
+
+		<style>
+			table, tr,td {
+				border-collapse: collapse;
+				border-spacing: 0px;
+				padding: 0px;
+			}
+
+			.block-unbreakable_block {
+				background-image: url('Table-Game_UNBREAKABLE_BLOCK.png');
+			}
+
+			.center {
+				display: block;
+				margin-left: auto;
+				margin-right: auto;
+			}
+
+			header {
+				background-color:#616161 ;
+				border: none;
+			}
+
+			.invisButton{
+				border: none;
+				background: none;
+			}
+
+			body{
+				background-color:#1D2A35 ;
+			}
+
+			.bodyBackground {
+				background-color:#1D2A35 ;
+			}
+
+			.playingTable {
+				margin-top: 20px;
+				margin-left: auto;
+				margin-right: auto;
+			}
+
+		</style>
+	</head>
+
+	<body>
+		<header>
+			<div  style="position:relative; top: 10 px ; left: 2px;  ">
+				<button type="button" class="invisButton" id="menuButton">	
+					<img src="Textures/menu-button.png" >
+				</button>
+			</div>
+			<div style="position: relative; text-align: center; bottom: 35px;">
+				<h2 style="color:white;">made by Jakob</h3>
+			</div>
+		</header>
+		<div>
+			<img src="Textures/Logo.png" widht="400" height="400" class="center">
+		</div>
+		<p></p>
+		<div class="bodyBackground" id="playButton">
+			<button type="button" class="invisButton, center" >	
+				<img src="Textures/play-button.png" >
+			</button>
+		</div>
+		NewLevel:<input type="file" onchange="loadLevel(event)">
+
+		<select id="level_selector">
+			<option value="levels/Lv_1.json">Level 1</option>
+			<option value="levels/Lv_2.json">Level 2</option>
+			<option value="levels/Lv_3.json">Level 3</option>
+			<option value="levels/Lv_4.json">Level 4</option>
+			<option value="levels/Lv_5.json">Level 5</option>
+			<option value="levels/Lv_6.json">Level 6</option>
+			<option value="levels/Lv_7.json">Level 7</option>
+			<option value="levels/Lv_8.json">Level 8</option>
+			<option value="levels/Lv_9.json">Level 9</option>
+		</select>
+
+		<button>Load Level</button>
+
+		<p></p>
+		<button onclick="resetGame()">Reset</button>
+		<button onclick="setCheckpoint()">setCheckpoint</button>
+		<button onclick="loadCheckpoint()">loadCheckpoint</button>
+	</body>
+	<script src="Animations.js"></script>
+	<script src="globalFunctions.js"></script>
+	<script  src= "MoveLogik.js" ></script>
+	<script src="automaticCells.js"></script>
+	<script>
+		//sessionStorage.removeItem("bounceBackup_"+ x +"_"+y)
+		//All Const's			
+
+		
+
+		//All var's
+		var inputAssignment = true 
+
+		/**
+		 * The model where you calculate the game in the background
+		 *
+		 * -size = [ row_times-[ column_times-[] ] ]
+		*/var model = [
+			[],
+		]
+
+
+		function loadLevel(event){
+			const input = event.target;
+			const levelFile = event.target.files;
+			const reader = new FileReader();
+			reader.onload = function () {
+				var level = reader.result;
+				var levelFileTest = false
+				try {
+					JSON.parse(level)
+					levelFileTest = true
+				}catch{
+					alert ("Please selct a proper JSON file")
+				}
+				if (levelFileTest){
+					var levelData = JSON.parse(level);
+					//local storage === level speichern
+					sessionStorage.removeItem("level")
+					sessionStorage.setItem("level",level)
+					model = createPlayingTemplate(levelData, "playingTable", "tblId_");
+				}
+				placingUpdateAll();
+				updateTable(model,"tblId_");
+			}
+			if (levelFile[0]){
+				reader.readAsText(levelFile[0])
+			}
+		}
+
+
+		function resetGame() {
+			var backup = sessionStorage.getItem("level");
+			var levelData = JSON.parse(backup);
+			createTable(levelData.sizeX, levelData.sizeY, "playingTable", "tblId_");
+			model = levelData.model;
+			placingUpdateAll();
+			updateTable(model,"tblId_");
+		}
+			
+		function test (){
+			createTable(10, 10, "playingTable", "tblId_");
+			model =  modifyModel(model, 10, 10);
+			for (x = 1; x < 9; x++ ) {
+				for (y = 1; y < 9; y++) { 
+				model[x][y] = AIR 
+				}
+			}
+			model[1][1] = PLAYER;
+			updateTable(model,"tblId_")
+		}
+
+		function setCheckpoint(){
+			temporySaveLevelData(model);
+		}
+
+
+		function loadCheckpoint(){
+			var levelData = JSON.parse(sessionStorage.getItem("temporyLevelData"));
+			model = createPlayingTemplate(levelData, "playingTable", "tblId_");
+			updateTable(model, "tblId_")
+		}
+
+
+		//all document events
+		document.body.onkeydown = keyboardEvents;
+		document.getElementById("menuButton").onclick = menuButtonClicked
+		document.getElementById("playButton").onclick = test
+		
+		
+		function keyboardEvents(event) {
+			if(!isAnimationRunning()) {
+				if ((event.code == "KeyD" || event.code == "ArrowRight")) {
+					model  = playerMove(0 , 1, model).model
+					inputAssignment = false
+				}
+				if ((event.code == "KeyA" || event.code == "ArrowLeft")) {
+					model  = playerMove(0 , -1, model).model
+					inputAssignment = false
+				}
+				if ((event.code == "KeyS" || event.code == "ArrowDown")) {
+					model  = playerMove(1 , 1, model).model
+					inputAssignment = false
+				}
+				if ((event.code == "KeyW" || event.code == "ArrowUp")) {
+					model  = playerMove(1 , -1, model).model
+					inputAssignment = false
+				}
+				//to look for event-codes
+				// console.log(event)
+			}
+		}
+
+		//todo - make independent from moveLogik
+		function afterAnimationCompleted(){
+			if(!isAnimationRunning()) {
+				inputAssignment = true;
+				updateTable(model, "tblId_");
+			}
+		}
+
+
+
+		//website organisation
+		function menuButtonClicked() {
+
+		}
+		
+	</script>	
+	
+	
+
+</html>
